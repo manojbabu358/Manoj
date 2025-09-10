@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Blood Donor Finder — v3</title>
+<style>
+:root {
+  --accent:#e53935;
+  --muted:#666;
+  --bg:#fafafa;
+}
+*{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+body{
+  margin:0;background:linear-gradient(180deg,#fff 0%, #ffe6e6 80%);
+  color:#222;min-height:100vh;display:flex;justify-content:center;padding:28px;
+}
+.app{width:100%;max-width:1100px;background:#fff;border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,0.08);overflow:hidden}
+header{padding:20px 28px;border-bottom:1px solid #f0e0e0;background:linear-gradient(90deg,#fff,#fff8f8)}
+header h1{margin:0;font-size:22px;color:var(--accent)}
+header p{margin:6px 0 0;color:var(--muted);font-size:13px}
+main{display:grid;grid-template-columns:320px 1fr;gap:0}
+.tabs{display:flex;border-bottom:1px solid #eee}
+.tab{flex:1;text-align:center;padding:10px;cursor:pointer;font-size:14px;font-weight:600}
+.tab.active{background:#ffecec;color:var(--accent)}
+.panel{display:none;padding:16px}
+.panel.active{display:block}
+label{display:block;font-size:13px;margin:8px 0 4px}
+input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px}
+.btn{display:inline-block;padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;font-size:13px}
+.btn.secondary{background:#555;color:#fff}
+.btn.icon{padding:6px 8px;border-radius:6px;font-size:12px}
+.controls{display:flex;gap:8px;margin-top:10px}
+.right{padding:20px;border-left:1px solid #f0e0e0}
+.search-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.donor-list{max-height:68vh;overflow:auto}
+.donor{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;margin-bottom:10px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
+.avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffecec;color:var(--accent);font-weight:700;font-size:16px;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.meta h3{margin:0;font-size:15px}
+.meta p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.actions{display:flex;gap:6px}
+.notice{background:#fff6f6;padding:12px;border-radius:10px;border:1px dashed #ffdada;color:#b00000;text-align:center}
+footer{padding:12px 20px;border-top:1px solid #f0e6e6;background:#fff;font-size:13px;color:var(--muted);text-align:center}
+@media (max-width:880px){main{grid-template-columns:1fr}.right{border-left:none;border-top:1px solid #eee}}
+.logo{display:inline-block;background:linear-gradient(45deg,#ff6b6b,#ffb4b4);color:#fff;padding:6px 10px;border-radius:8px;font-weight:700}
+
+/* welcome page */
+.welcome{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100vh;text-align:center;
+  background:linear-gradient(135deg,#ff6b6b,#ffb4b4);
+  color:#fff;font-family:Inter,Arial;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;
+}
+.welcome h1{font-size:42px;margin:0}
+.welcome p{font-size:18px;margin:10px 0 20px}
+.welcome button{
+  padding:12px 24px;border:none;border-radius:8px;
+  background:#fff;color:#e53935;font-size:16px;font-weight:bold;cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- Welcome Screen -->
+<div class="welcome" id="welcomePage">
+  <h1>❤️ Blood Donor Finder</h1>
+  <p>Find and connect with life-saving donors easily</p>
+  <button onclick="enterApp()">Get Started</button>
+</div>
+
+<!-- Main App -->
+<div class="app" style="display:none;">
+<header>
+  <h1><span class="logo">BDF</span> Blood Donor Finder</h1>
+  <p>Register donors locally (browser storage). Now supports <b>Photo upload</b> 🎉</p>
+</header>
+
+<main>
+  <!-- left: tabs -->
+  <section>
+    <div class="tabs">
+      <div class="tab active" data-tab="reg">Register</div>
+      <div class="tab" data-tab="imp">Import/Restore</div>
+    </div>
+    <div class="panel active" id="reg">
+      <form id="donorForm">
+        <label>Full name</label><input id="name" required />
+        <label>Blood group</label>
+        <select id="blood" required>
+          <option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+        </select>
+        <label>Phone</label><input id="phone" />
+        <label>City</label><input id="city" />
+        <label>Last donation</label><input id="last" type="date" />
+        <label>Photo</label><input id="photo" type="file" accept="image/*" />
+        <div class="controls">
+          <button class="btn" type="submit">Add Donor</button>
+          <button class="btn secondary" id="clearBtn" type="button">Clear All</button>
+        </div>
+      </form>
+    </div>
+    <div class="panel" id="imp">
+      <textarea id="importArea" style="width:100%;height:90px"></textarea>
+      <div class="controls">
+        <button class="btn" id="importBtn">Import</button>
+        <button class="btn secondary" id="seedBtn">Seed Sample</button>
+        <button class="btn" id="exportBtn">Export</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- right -->
+  <section class="right">
+    <div class="search-bar">
+      <select id="filterBlood"><option value="">All groups</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select>
+      <input id="filterCity" placeholder="City search" />
+      <button class="btn" id="searchBtn">Search</button>
+      <button class="btn secondary" id="resetSearch">Reset</button>
+    </div>
+    <div id="stats" class="muted" style="margin-bottom:8px">0 donors</div>
+    <div class="donor-list" id="donorList">
+      <div class="notice">No donors yet — add or seed sample.</div>
+    </div>
+  </section>
+</main>
+
+<footer>© 2025 Blood Donor Finder — Demo v3</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const KEY='bdf:donors:v3';
+const nowISO=()=>new Date().toISOString();
+function enterApp(){
+  document.getElementById("welcomePage").style.display="none";
+  document.querySelector(".app").style.display="block";
+}
+function load(){try{const raw=localStorage.getItem(KEY);return raw?JSON.parse(raw):[]}catch{return[]}}
+function save(arr){localStorage.setItem(KEY,JSON.stringify(arr));renderList(arr)}
+function uid(){return 'd_'+Math.random().toString(36).slice(2,9)}
+function eligible(last){if(!last) return true;const d=new Date(last);const diff=(Date.now()-d)/(1000*60*60*24);return diff>=90}
+
+function renderList(donors){
+  const out=$('donorList');out.innerHTML='';
+  $('stats').textContent=`${donors.length} donor${donors.length!==1?'s':''}`;
+  if(!donors.length){out.innerHTML='<div class="notice">No donors yet</div>';return}
+  donors.forEach(d=>{
+    const el=document.createElement('div');el.className='donor';
+    const avatarContent=d.photo?`<img src="${d.photo}">`:`${d.blood.replace('+','p').replace('-','m')}`;
+    el.innerHTML=`
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="avatar">${avatarContent}</div>
+        <div class="meta">
+          <h3>${d.name} ${d.available?'':'(Busy)'}</h3>
+          <p><span>${d.blood}</span> • ${d.city||'—'} • ${eligible(d.lastDonation)?'Eligible':'Not eligible'}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn icon">📞</button>
+        <button class="btn icon secondary">📋</button>
+        <button class="btn icon">📍</button>
+        <button class="btn icon">${d.available?'⏸':'▶'}</button>
+        <button class="btn icon secondary">❌</button>
+      </div>`;
+    const [callBtn,copyBtn,mapBtn,toggleBtn,delBtn]=el.querySelectorAll('button');
+    callBtn.onclick=()=>{if(!d.phone){alert('No phone');return}location.href='tel:'+d.phone}
+    copyBtn.onclick=async()=>{try{await navigator.clipboard.writeText(d.phone||'');alert('Copied')}catch{prompt('Copy',d.phone||'')}}
+    mapBtn.onclick=()=>{const q=encodeURIComponent(d.city||d.name);window.open('https://www.google.com/maps/search/'+q,'_blank')}
+    toggleBtn.onclick=()=>{d.available=!d.available;d.updatedAt=nowISO();const arr=load().map(x=>x.id===d.id?d:x);save(arr)}
+    delBtn.onclick=()=>{if(confirm('Delete?')){save(load().filter(x=>x.id!==d.id))}}
+    out.appendChild(el);
+  })
+}
+
+// form
+$('donorForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  let photoBase64=null;
+  const file=$('photo').files[0];
+  if(file){
+    photoBase64=await new Promise(res=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result);
+      r.readAsDataURL(file);
+    });
+  }
+  const donor={
+    id:uid(),
+    name:$('name').value.trim(),
+    blood:$('blood').value.trim(),
+    phone:$('phone').value.trim(),
+    city:$('city').value.trim(),
+    lastDonation:$('last').value||null,
+    photo:photoBase64,
+    available:true,
+    createdAt:nowISO(),
+    updatedAt:nowISO()
+  };
+  if(!donor.name||!donor.blood){alert('Fill name + blood');return}
+  const arr=load();arr.unshift(donor);save(arr);
+  e.target.reset();
+})
+
+$('clearBtn').onclick=()=>{if(confirm('Clear all?')){localStorage.removeItem(KEY);renderList([])}}
+$('exportBtn').onclick=()=>{const data=JSON.stringify(load(),null,2);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data]));a.download='donors.json';a.click()}
+$('importBtn').onclick=()=>{try{const arr=JSON.parse($('importArea').value);if(!Array.isArray(arr))throw'';save(arr);alert('Imported')}catch{alert('Invalid JSON')}}
+$('seedBtn').onclick=()=>{const arr=[{id:uid(),name:'Anbu',blood:'O+',phone:'+91 9876543210',city:'Tiruvannamalai',lastDonation:'2025-05-01',photo:null,available:true,createdAt:nowISO(),updatedAt:nowISO()}];save(arr)}
+
+function search(){const g=$('filterBlood').value.trim();const c=$('filterCity').value.trim().toLowerCase();const res=load().filter(d=>(!g||d.blood===g)&&(!c||(d.city||'').toLowerCase().includes(c)));renderList(res)}
+$('searchBtn').onclick=search;$('resetSearch').onclick=()=>{renderList(load());$('filterBlood').value='';$('filterCity').value=''}
+
+// tabs
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.tab).classList.add('active')})
+
+renderList(load());
+</script>
+</body>
+</html>
